@@ -30,8 +30,9 @@ remove_words!(crps, ["was", "is", "were", "and", "or", "of"])
 
 
 # Create lexicon with word counts
-lex = lexicon(crps) # The next two lines must be executed separately
+lexicon(crps)
 update_lexicon!(crps)
+lex = lexicon(crps)
 
 # Wordcount Dataframe
 using DataFrames
@@ -66,6 +67,9 @@ bing_pos_df = convert(DataFrame, bing_pos)
 bing_pos_name = ["word"]
 rename!(bing_pos_df, Symbol.(bing_pos_name))
 
+bing_pos_df[!, :sentiment] .= "positive"
+bing_neg_df[!, :sentiment] .= "negative"
+bing_comp = [bing_pos_df; bing_neg_df]
 # Explore sentiment data by category
 
 df_bing_pos = join(wordcounts, bing_pos_df, on = :word, kind = :inner)
@@ -80,3 +84,29 @@ using Gadfly
 
 plot(df_bing_pos_10, x = :word, y = :count, Geom.bar, Theme(bar_spacing=1mm, default_color = "#a7e0f4"))
 plot(df_bing_neg_10, x = :word, y = :count, Geom.bar, Theme(bar_spacing=1mm, default_color = "#fdb9c9"))
+
+# Analysis of indexed portions of document
+using WordTokenizers, StatsBase
+pathname = "/Users/nfsturm/Documents/LettersToCareFor.txt"
+ltcf_comp = FileDocument(pathname)
+ltcf_comp = convert(StringDocument, ltcf_comp)
+
+prepare!(ltcf_comp, strip_punctuation)
+prepare!(ltcf_comp, strip_articles)
+prepare!(ltcf_comp, strip_html_tags)
+prepare!(ltcf_comp, strip_numbers)
+prepare!(ltcf_comp, strip_prepositions)
+prepare!(ltcf_comp, strip_pronouns)
+remove_words!(ltcf_comp, ["was", "is", "were", "and", "or", "of", "has", "been", "got", "if", "and", "Henry", "Victoria", "as", "to"])
+
+tokens_ltcf = tokenize(text(ltcf_comp))
+ltcf_df = DataFrame(Any[collect(tokens_ltcf)])
+
+ltcf_df[:index] = repeat(1:59, inner = 143)
+ltcf_names = ["word", "index"]
+rename!(ltcf_df, Symbol.(ltcf_names))
+
+ltcf_df_sents = join(ltcf_df, bing_comp, on = :word, kind = :inner)
+grouped = groupby(ltcf_df_sents, :index)
+
+map(:sentiment => countmap, grouped)
