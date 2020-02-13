@@ -97,7 +97,6 @@ prepare!(ltcf_comp, strip_html_tags)
 prepare!(ltcf_comp, strip_numbers)
 prepare!(ltcf_comp, strip_prepositions)
 prepare!(ltcf_comp, strip_pronouns)
-remove_words!(ltcf_comp, ["was", "is", "were", "and", "or", "of", "has", "been", "got", "if", "and", "Henry", "Victoria", "as", "to"])
 
 tokens_ltcf = tokenize(text(ltcf_comp))
 ltcf_df = DataFrame(Any[collect(tokens_ltcf)])
@@ -121,8 +120,10 @@ rename!(sentiment_sections, :vals => :sent_class)
 
 # Plotting Sentiment by Section
 
-using Gadfly
-plot(sentiment_sections, x = :index, y = :sentiment_sum, color = :sent_class,
+using Gadfly, Cairo
+p = plot(sentiment_sections, x = :index, y = :sentiment_sum, color = :sent_class,
 Geom.bar, Guide.colorkey("Sentiment Class"), Theme(bar_spacing = 1mm, default_color = "green"),
 Scale.color_discrete_manual(colorant"#12a4f1", colorant"#f6546a"),
 Guide.ylabel("Overall Sentiment"), Guide.xlabel("Index (143 Tokens)"), Guide.title("Overall Sentiment per Section"))
+
+draw(PNG("Sentiment_Analysis.png", 1200px, 800px), p)
