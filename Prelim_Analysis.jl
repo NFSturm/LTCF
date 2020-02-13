@@ -102,11 +102,27 @@ remove_words!(ltcf_comp, ["was", "is", "were", "and", "or", "of", "has", "been",
 tokens_ltcf = tokenize(text(ltcf_comp))
 ltcf_df = DataFrame(Any[collect(tokens_ltcf)])
 
-ltcf_df[:index] = repeat(1:59, inner = 143)
+ltcf_df[!, :index] = repeat(1:59, inner = 143)
 ltcf_names = ["word", "index"]
 rename!(ltcf_df, Symbol.(ltcf_names))
 
-ltcf_df_sents = join(ltcf_df, bing_comp, on = :word, kind = :inner)
+ltcf_df_sents = join(ltcf_df, afinn_df, on = :word, kind = :inner)
 grouped = groupby(ltcf_df_sents, :index)
 
-map(:sentiment => countmap, grouped)
+ltcf_sec_scores = map(:sentiment => sum, grouped)
+sentiment_sections = DataFrame(ltcf_sec_scores)
+
+sentiment_sections[!, :vals] = sentiment_sections[:sentiment_sum] .> 0
+
+sentiment_sections[!, :vals] = replace(sentiment_sections[:vals], 1 => "Positive")
+sentiment_sections[!, :vals] = replace(sentiment_sections[:vals], 0 => "Negative")
+
+rename!(sentiment_sections, :vals => :sent_class)
+
+# Plotting Sentiment by Section
+
+using Gadfly
+plot(sentiment_sections, x = :index, y = :sentiment_sum, color = :sent_class,
+Geom.bar, Guide.colorkey("Sentiment Class"), Theme(bar_spacing = 1mm, default_color = "green"),
+Scale.color_discrete_manual(colorant"#12a4f1", colorant"#f6546a"),
+Guide.ylabel("Overall Sentiment"), Guide.xlabel("Index (143 Tokens)"), Guide.title("Overall Sentiment per Section"))
